@@ -1,3 +1,5 @@
+import os
+
 # 1. s-box (substitution box) - figure 7
 # derived from the multiplicative inverse over GF(2^8)
 SBOX = [
@@ -20,7 +22,7 @@ SBOX = [
 ]
 
 # round constants for key expansion
-RCON = [0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36]
+RCON = [0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36]
 
 def subWord(word):
     # apply s-box substitution to a 4-byte word
@@ -87,34 +89,49 @@ def mixColumns(state):
         state[2][c] = s0 ^ s1 ^ xtime(s2) ^ (xtime(s3) ^ s3)
         state[3][c] = (xtime(s0) ^ s0) ^ s1 ^ s2 ^ xtime(s3)
 
-def encrypt(plaintext, key):
-    # main AES 128 encryption routine
+def text_to_bytes(text):
+    return list(text.encode('utf-8'))
 
-    # 1. convert plaintext to 4x4 state matrix (column-major order)
+def bytes_to_text(byte_list):
+    return bytes(byte_list).decode('utf-8')
+
+def pad(data):
+    pad_len = 16 - (len(data) % 16)
+    return data + [pad_len] * pad_len
+
+def unpad(data):
+    pad_len = data[-1]
+    return data[:-pad_len]
+
+def xor_bytes(a, b):
+    return [x ^ y for x, y in zip(a, b)]
+
+def encrypt(plaintext, key):
+    # convert plaintext to 4x4 state matrix (column-major order)
     state = [[0]*4 for _ in range(4)]
     for r in range(4):
         for c in range(4):
             state[r][c] = plaintext[r + (4*c)]
 
-    # 2. key expansion
+    # key expansion
     round_keys = keyExpansion(key)
 
-    # 3. initial round
+    # initial round
     addRoundKey(state, round_keys[0])
 
-    # 4. round 1 to 9
+    # round 1 to 9
     for round_idx in range(1, 10):
         subBytes(state)
         shiftRows(state)
         mixColumns(state)
         addRoundKey(state, round_keys[round_idx])
 
-    # 5. final round w/o mixColumns
+    # final round w/o mixColumns
     subBytes(state)
     shiftRows(state)
     addRoundKey(state, round_keys[10])
 
-    # 6. convert state back to flat list
+    # convert state back to flat list
     output = [0] * 16
     for r in range(4):
         for c in range(4):
@@ -122,3 +139,119 @@ def encrypt(plaintext, key):
 
     return output
 
+INV_SBOX = [0] * 256
+for i in range(256):
+    INV_SBOX[SBOX[i]] = i
+
+def invSubBytes(state):
+    for r in range(4):
+        for c in range(4):
+            state[r][c] = INV_SBOX[state[r][c]]
+
+def invShiftRows(state):
+    state[1] = state[1][-1:] + state[1][:-1]
+    state[2] = state[2][-2:] + state[2][:-2]
+    state[3] = state[3][-3:] + state[3][:-3]
+
+def gmul(a, b):
+    p = 0
+    for _ in range(8):
+        if b & 1:
+            p ^= a
+        hi_bit = a & 0x80
+        a = (a << 1) & 0xff
+        if hi_bit: 
+            a ^= 0x1b
+        b >>= 1
+    return p
+
+def invMixColumns(state):
+    for c in range(4):
+        s0, s1, s2, s3 = state[0][c], state[1][c], state[2][c], state[3][c]
+
+        state[0][c] = gmul(s0, 0x0e) ^ gmul(s1, 0x0b) ^ gmul(s2, 0x0d) ^ gmul(s3, 0x09)
+        state[1][c] = gmul(s0, 0x09) ^ gmul(s1, 0x0e) ^ gmul(s2, 0x0b) ^ gmul(s3, 0x0d)
+        state[2][c] = gmul(s0, 0x0d) ^ gmul(s1, 0x09) ^ gmul(s2, 0x0e) ^ gmul(s3, 0x0b)
+        state[3][c] = gmul(s0, 0x0b) ^ gmul(s1, 0x0d) ^ gmul(s2, 0x09) ^ gmul(s3, 0x0e)
+
+def decrypt(ciphertext, key):
+    # convert cipher to state matrix
+    state = [[0]*4 for _ in range(4)]
+    for r in range(4):
+        for c in range(4):
+            state[r][c] = ciphertext[r + (4*c)]
+    
+    # key expansion
+    round_keys = keyExpansion(key)
+
+    # initial round
+    addRoundKey(state, round_keys[10])
+
+    # rounds 9 to 1
+    for round_idx in range(9, 0, -1):
+        invShiftRows(state)
+        invSubBytes(state)
+        addRoundKey(state, round_keys[round_idx])
+        invMixColumns(state)
+
+    # final round w/o mixColumns
+    invShiftRows(state)
+    invSubBytes(state)
+    addRoundKey(state, round_keys[0])
+
+    # flatten state back to list
+    output = [0] * 16
+    for r in range(4):
+        for c in range(4):
+            output[r + (4*c)] = state[r][c]
+
+    return output
+
+def encrypt_text(plaintext, key):
+    data = text_to_bytes(plaintext)
+    data = pad(data)
+
+    iv = list(os.urandom(16))   # random 16-byte initialization vector
+    ciphertext = []
+
+    prev = iv
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        block = xor_bytes(block, prev)
+        enc = encrypt(block, key)
+        ciphertext.extend(enc)
+        prev = enc
+    return iv + ciphertext
+
+def decrypt_text(ciphertext, key):
+    iv = ciphertext[:16]
+    data = ciphertext[16:]
+
+    plaintext = []
+    prev = iv
+
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        dec = decrypt(block, key)
+        dec = xor_bytes(dec, prev)
+        plaintext.extend(dec)
+        prev = block
+    
+    plaintext = unpad(plaintext)
+    return bytes_to_text(plaintext)
+
+if __name__ == "__main__":
+    # example usage
+    key = [
+    0x2b,0x7e,0x15,0x16,
+    0x28,0xae,0xd2,0xa6,
+    0xab,0xf7,0x15,0x88,
+    0x09,0xcf,0x4f,0x3c
+    ]
+
+    user_input = "Hello AES"
+    ciphertext = encrypt_text(user_input, key)
+    print("Ciphertext:", ciphertext)
+
+    plaintext = decrypt_text(ciphertext, key)
+    print("Decrypted: ", plaintext)
