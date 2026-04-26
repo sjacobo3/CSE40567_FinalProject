@@ -251,7 +251,7 @@ def encrypt_file(input_path, output_path, key):
     prev = iv
     for i in range(0, len(data), 16):
         block = data[i:i+16]
-        block = xor_bytes(block_prev)
+        block = xor_bytes(block, prev)
         enc = encrypt(block, key)
         ciphertext.extend(enc)
         prev = enc
@@ -278,11 +278,10 @@ def decrypt_file(input_path, output_path, key):
 
     plaintext = unpad(plaintext)
 
-    with open(outut_path, "wb") as f:
+    with open(output_path, "wb") as f:
         f.write(bytes(plaintext))
 
 if __name__ == "__main__":
-    # example usage
     key = [
     0x2b,0x7e,0x15,0x16,
     0x28,0xae,0xd2,0xa6,
@@ -290,9 +289,14 @@ if __name__ == "__main__":
     0x09,0xcf,0x4f,0x3c
     ]
 
-    user_input = "Hello AES"
-    ciphertext = encrypt_text(user_input, key)
-    print("Ciphertext:", ciphertext)
+    # user_input = "Hello AES"
+    # ciphertext = encrypt_text(user_input, key)
+    # print("Ciphertext:", ciphertext)
 
-    plaintext = decrypt_text(ciphertext, key)
-    print("Decrypted: ", plaintext)
+    # plaintext = decrypt_text(ciphertext, key)
+    # print("Decrypted: ", plaintext)
+
+    input_path = input("Input file path: ")
+    output_path = input("Output file path: ")
+
+    decrypt_file(input_path, output_path, key)
