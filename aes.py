@@ -240,6 +240,47 @@ def decrypt_text(ciphertext, key):
     plaintext = unpad(plaintext)
     return bytes_to_text(plaintext)
 
+def encrypt_file(input_path, output_path, key):
+    with open(input_path, "rb") as f:
+        data = list(f.read())
+
+    data = pad(data)
+    iv = list(os.urandom(16))
+    ciphertext = []
+
+    prev = iv
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        block = xor_bytes(block_prev)
+        enc = encrypt(block, key)
+        ciphertext.extend(enc)
+        prev = enc
+    
+    with open(output_path, "wb") as f:
+        f.write(bytes(iv + ciphertext))
+
+def decrypt_file(input_path, output_path, key):
+    with open(input_path, "rb") as f:
+        data = list(f.read())
+    
+    iv = data[:16]
+    data = data[16:]    
+
+    plaintext = []
+    prev = iv
+    
+    for i in range(0, len(data), 16):
+        block = data[i:i+16]
+        dec = decrypt(block, key)
+        dec = xor_bytes(dec, prev)
+        plaintext.extend(dec)
+        prev = block
+
+    plaintext = unpad(plaintext)
+
+    with open(outut_path, "wb") as f:
+        f.write(bytes(plaintext))
+
 if __name__ == "__main__":
     # example usage
     key = [
