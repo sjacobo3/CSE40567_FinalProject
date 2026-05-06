@@ -46,7 +46,7 @@ const AES = ({ cipher }) =>
             // download encrypted file
             const blob = new Blob([new Uint8Array(ciphertext_js)])
             const temp_url = URL.createObjectURL(blob)
-            Object.assign(document.createElement("a"), { href: temp_url, download: `encrypted${fileExt}` }).click()
+            Object.assign(document.createElement("a"), { href: temp_url, download: `encrypted_file${fileExt}` }).click()
             URL.revokeObjectURL(temp_url)
         }
     }
@@ -69,7 +69,7 @@ const AES = ({ cipher }) =>
             // download decrypted file
             const blob = new Blob([new Uint8Array(plaintext_js)])
             const temp_url = URL.createObjectURL(blob)
-            Object.assign(document.createElement("a"), { href: temp_url, download: `decrypted${fileExt}` }).click()
+            Object.assign(document.createElement("a"), { href: temp_url, download: `decrypted_file${fileExt}` }).click()
             URL.revokeObjectURL(temp_url)
         }
     }
