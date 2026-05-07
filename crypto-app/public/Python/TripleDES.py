@@ -1,6 +1,3 @@
-'''Imports'''
-import os
-
 '''Define Global Variables'''
 left_shifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 permuted_choice_1 = [

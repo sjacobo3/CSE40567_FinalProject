@@ -103,13 +103,13 @@ def plot(title, mode, axis):
     axis.grid(True, linestyle='--', alpha=0.4)
 
 # plot encryption times
-fig_enc, axis_enc = plt.subplots(figsize=(10,6))
+fig_enc, axis_enc = plt.subplots(figsize=(10,4))
 plot('Encryption Efficiency', 'encryption_times', axis_enc)
 plt.tight_layout()
 plt.savefig('public/encryption.png', dpi=150)
 
 # plot decryption times
-fig_dec, axis_dec = plt.subplots(figsize=(10,6))
+fig_dec, axis_dec = plt.subplots(figsize=(10,4))
 plot('Decryption Efficiency', 'decryption_times', axis_dec)
 plt.tight_layout()
 plt.savefig('public/decryption.png', dpi=150)

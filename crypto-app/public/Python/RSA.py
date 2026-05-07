@@ -102,8 +102,6 @@ def rsa_decrypt_file(ciphertext, d, n):
     plaintext = bytearray()
     # go through each line in the ciphertext
     for line in ciphertext:
-        # if ":" not in line:
-        #     continue
         # retrieve encrypted and block_len
         encrypted, block_len = line.split(":")
         # process using RSA decryption
